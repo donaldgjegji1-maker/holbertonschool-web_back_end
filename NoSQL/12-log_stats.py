@@ -4,27 +4,40 @@
 from pymongo import MongoClient
 
 
-def log_stats():
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    db = client.logs  # Use the 'logs' database
-    collection = db.nginx  # Use the 'nginx' collection
+def get_nginx_stats():
+    """Retrieve and display Nginx log statistics"""
 
-    # Total number of documents in the collection
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    db = client.logs
+    collection = db.nginx
+
+    # Get total number of logs
     total_logs = collection.count_documents({})
     print(f"{total_logs} logs")
 
-    # HTTP Methods count
+    # Methods to count
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     print("Methods:")
 
-    for method in methods:
-        method_count = collection.count_documents({"method": method})
-        print(f"\tmethod {method}: {method_count}")
+    # Count all methods in one query using aggregation
+    pipeline = [
+        {"$group": {"_id": "$method", "count": {"$sum": 1}}}
+    ]
 
-    # GET method with path = /status
+    method_counts = {}
+    for doc in collection.aggregate(pipeline):
+        method_counts[doc["_id"]] = doc["count"]
+
+    # Print methods in the required order
+    for method in methods:
+        count = method_counts.get(method, 0)
+        print(f"    method {method}: {count}")
+
+    # Count status check
     status_check = collection.count_documents({
-        "method": "GET", "path": "/status"
-        })
+        "method": "GET", 
+        "path": "/status"
+    })
     print(f"{status_check} status check")
 
 
