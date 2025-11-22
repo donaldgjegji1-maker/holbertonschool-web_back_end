@@ -4,7 +4,6 @@ Provides stats about Nginx logs stored in MongoDB
 """
 
 import subprocess
-import json
 
 
 def run_mongo_command(command):
@@ -17,16 +16,29 @@ def run_mongo_command(command):
             check=True
         )
         return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Error running command: {e}")
-        return "0"
+    except subprocess.CalledProcessError:
+        # If command fails, return empty string
+        return ""
 
 
 def get_nginx_stats():
     """Retrieve and display Nginx log statistics"""
 
+    # First, check if we can connect to the database
+    test_connection = run_mongo_command("db.getCollectionNames()")
+    if not test_connection:
+        print("0 logs")
+        print("Methods:")
+        methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        for method in methods:
+            print(f"    method {method}: 0")
+        print("0 status check")
+        return
+
     # Get total number of logs
     total_logs = run_mongo_command("db.nginx.countDocuments()")
+    if not total_logs:
+        total_logs = "0"
     print(f"{total_logs} logs")
 
     # Methods to count
@@ -37,11 +49,15 @@ def get_nginx_stats():
     for method in methods:
         cmd = f'db.nginx.countDocuments({{"method": "{method}"}})'
         count = run_mongo_command(cmd)
+        if not count:
+            count = "0"
         print(f"    method {method}: {count}")
 
     # Count status check (method=GET and path=/status)
     sts_cmd = 'db.nginx.countDocuments({"method": "GET", "path": "/status"})'
     status_check = run_mongo_command(sts_cmd)
+    if not status_check:
+        status_check = "0"
     print(f"{status_check} status check")
 
 
