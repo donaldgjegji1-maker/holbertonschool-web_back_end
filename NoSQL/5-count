@@ -1,2 +1,3 @@
 // 5-count
-print(db.school.countDocuments());
+var count = db.school.countDocuments({});
+print(count);
