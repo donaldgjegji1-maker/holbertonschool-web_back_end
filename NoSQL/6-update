@@ -1,6 +1,5 @@
 // 6-update
-var result = db.school.updateMany(
-  { name: "Holberton school" },
-  { $set: { address: "972 Mission street" } }
-);
-print("WriteResult({ \"nMatched\" : " + result.matchedCount + ", \"nUpserted\" : " + result.upsertedCount + ", \"nModified\" : " + result.modifiedCount + " })");
+printjson(db.getSiblingDB(db.getName()).school.updateMany(
+    { "name": "Holberton school" },
+    { $set: { "address": "972 Mission street" } }
+));
