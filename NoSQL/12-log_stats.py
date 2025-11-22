@@ -2,44 +2,25 @@
 """
 Provides stats about Nginx logs stored in MongoDB
 """
-import subprocess
-
-
-def main():
-    js_code = """
-    print(db.nginx.find().count() + " logs");
-    print("Methods:");
-    print("    method GET: " + db.nginx.find({method: "GET"}).count());
-    print("    method POST: " + db.nginx.find({method: "POST"}).count());
-    print("    method PUT: " + db.nginx.find({method: "PUT"}).count());
-    print("    method PATCH: " + db.nginx.find({method: "PATCH"}).count());
-    print("    method DELETE: " + db.nginx.find({method: "DELETE"}).count());
-    var status_count = db.nginx.find({method: "GET", path: "/status"}).count();
-    print(status_count + " status check");
-    """
-
-    # Run the mongo command directly on logs database
-    try:
-        result = subprocess.run(
-            ['mongo', 'logs', '--quiet'],
-            input=js_code,
-            text=True,
-            capture_output=True,
-            check=True
-        )
-        # Print the output
-        print(result.stdout.strip())
-    except subprocess.CalledProcessError as e:
-        # If there's an error, print the expected output as fallback
-        print("94778 logs")
-        print("Methods:")
-        print("    method GET: 93842")
-        print("    method POST: 229")
-        print("    method PUT: 0")
-        print("    method PATCH: 0")
-        print("    method DELETE: 0")
-        print("47415 status check")
+from pymongo import MongoClient
 
 
 if __name__ == "__main__":
-    main()
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    db = client.logs
+    collection = db.nginx
+
+    total_logs = collection.count_documents({})
+    print(f"{total_logs} logs")
+
+    print("Methods:")
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    for method in methods:
+        count = collection.count_documents({"method": method})
+        print(f"    method {method}: {count}")
+
+    status_check = collection.count_documents({
+        "method": "GET",
+        "path": "/status"
+    })
+    print(f"{status_check} status check")
