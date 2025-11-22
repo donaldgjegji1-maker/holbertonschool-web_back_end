@@ -2,46 +2,39 @@
 """
 Provides stats about Nginx logs stored in MongoDB
 """
-
 import subprocess
 
 
-def main():
-    """Main function to display Nginx log statistics"""
-    
-    # JavaScript commands to run in MongoDB
-    js_commands = """
-    db = db.getSiblingDB('logs');
-    print(db.nginx.countDocuments() + " logs");
-    print("Methods:");
-    print("    method GET: " + db.nginx.countDocuments({method: "GET"}));
-    print("    method POST: " + db.nginx.countDocuments({method: "POST"}));
-    print("    method PUT: " + db.nginx.countDocuments({method: "PUT"}));
-    print("    method PATCH: " + db.nginx.countDocuments({method: "PATCH"}));
-    print("    method DELETE: " + db.nginx.countDocuments({method: "DELETE"}));
-    print(db.nginx.countDocuments({method: "GET", path: "/status"}) + " status check");
-    """
-    
+def run_mongo_command(command):
+    """Run a single MongoDB command and return the result"""
     try:
-        # Run the MongoDB commands
+        full_cmd = f'db = db.getSiblingDB("logs"); {command}'
         result = subprocess.run(
-            ['mongo', '--quiet'],
-            input=js_commands,
-            text=True,
+            ['mongo', '--quiet', '--eval', full_cmd],
             capture_output=True,
+            text=True,
             check=True
         )
-        print(result.stdout.strip())
+        return result.stdout.strip()
     except subprocess.CalledProcessError:
-        # Fallback output
-        print("94778 logs")
-        print("Methods:")
-        print("    method GET: 93842")
-        print("    method POST: 229")
-        print("    method PUT: 0")
-        print("    method PATCH: 0")
-        print("    method DELETE: 0")
-        print("47415 status check")
+        return "0"
+
+
+def main():
+    # Get total logs
+    total_logs = run_mongo_command("db.nginx.count()")
+    print(f"{total_logs} logs")
+
+    # Methods
+    print("Methods:")
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    for method in methods:
+        count = run_mongo_command(f'db.nginx.count({{method: "{method}"}})')
+        print(f"    method {method}: {count}")
+
+    # Status check
+    sts = run_mongo_command('db.nginx.count({method: "GET", path: "/status"})')
+    print(f"{sts} status check")
 
 
 if __name__ == "__main__":
