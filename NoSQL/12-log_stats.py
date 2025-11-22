@@ -1,45 +1,49 @@
 #!/usr/bin/env python3
-""" 12-log_stats.py """
+"""
+Provides stats about Nginx logs stored in MongoDB
+"""
 
-from pymongo import MongoClient
+import subprocess
+import json
+
+
+def run_mongo_command(command):
+    """Run a MongoDB command and return the result"""
+    try:
+        result = subprocess.run(
+            ['mongo', 'logs', '--eval', command, '--quiet'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error running command: {e}")
+        return "0"
 
 
 def get_nginx_stats():
     """Retrieve and display Nginx log statistics"""
 
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    db = client.logs
-    collection = db.nginx
-
     # Get total number of logs
-    total_logs = collection.count_documents({})
+    total_logs = run_mongo_command("db.nginx.countDocuments()")
     print(f"{total_logs} logs")
 
     # Methods to count
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     print("Methods:")
 
-    # Count all methods in one query using aggregation
-    pipeline = [
-        {"$group": {"_id": "$method", "count": {"$sum": 1}}}
-    ]
-
-    method_counts = {}
-    for doc in collection.aggregate(pipeline):
-        method_counts[doc["_id"]] = doc["count"]
-
-    # Print methods in the required order
+    # Count each method
     for method in methods:
-        count = method_counts.get(method, 0)
+        cmd = f'db.nginx.countDocuments({{"method": "{method}"}})'
+        count = run_mongo_command(cmd)
         print(f"    method {method}: {count}")
 
-    # Count status check
-    status_check = collection.count_documents({
-        "method": "GET", 
-        "path": "/status"
-    })
+    # Count status check (method=GET and path=/status)
+    sts_cmd = 'db.nginx.countDocuments({"method": "GET", "path": "/status"})'
+    status_check = run_mongo_command(sts_cmd)
     print(f"{status_check} status check")
 
 
 if __name__ == "__main__":
-    log_stats()
+    get_nginx_stats()
