@@ -1,17 +1,8 @@
 // 6-update
-var dbName = db.getName();
-var database = db.getSiblingDB(dbName);
-
-var tempResult = database.school.update(
-    { "name": "Holberton school" },
-    { $set: { "address": "temp_address" } },
-    { multi: true }
-);
-
-var finalResult = database.school.update(
+var result = db.getSiblingDB(db.getName()).school.update(
     { "name": "Holberton school" },
     { $set: { "address": "972 Mission street" } },
     { multi: true }
 );
 
-printjson(finalResult);
+printjson(result);
