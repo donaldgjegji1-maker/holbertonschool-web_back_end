@@ -1,3 +1,2 @@
 // 5-count
-var count = db.school.countDocuments({});
-print(count);
+print(db.getSiblingDB(db.getName()).school.count());
